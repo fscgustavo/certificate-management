@@ -8,6 +8,7 @@ export interface networkConfigItem {
   gasLane?: string;
   ethUsdPriceFeed?: string;
   mintFee?: string;
+  blockConfirmations?: number;
 }
 
 export const networkConfig: Record<number, networkConfigItem> = {
@@ -28,6 +29,7 @@ export const networkConfig: Record<number, networkConfigItem> = {
     keepersUpdateInterval: '30',
     raffleEntranceFee: '100000000000000000', // 0.1 ETH
     callbackGasLimit: '500000', // 500,000 gas
+    blockConfirmations: 4,
   },
   1: {
     name: 'mainnet',
@@ -35,4 +37,4 @@ export const networkConfig: Record<number, networkConfigItem> = {
   },
 };
 
-export const developmentChains = ['hardhat', 'localhost'];
+export const developmentChains = new Set(['hardhat', 'localhost']);
