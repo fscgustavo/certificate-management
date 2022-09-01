@@ -18,4 +18,8 @@ contract CertificateManagement is AccessControl {
     function addUniversity(address account) public onlyRole(ORGANIZATION_ROLE) {
         _grantRole(UNIVERSITY_ROLE, account);
     }
+
+    function addCertifier(address account) public onlyRole(UNIVERSITY_ROLE) {
+        _grantRole(CERTIFIER_ROLE, account);
+    }
 }
