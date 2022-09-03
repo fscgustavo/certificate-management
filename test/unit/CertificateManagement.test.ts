@@ -35,7 +35,7 @@ import { CertificateManagement } from '../../typechain-types';
           accounts.deployer,
         );
 
-        expect(isOrganization).to.be.equal(true);
+        expect(isOrganization).to.equal(true);
       });
 
       it('deployer should have the organization role', async () => {
@@ -47,7 +47,7 @@ import { CertificateManagement } from '../../typechain-types';
           accounts.deployer,
         );
 
-        expect(isOrganization).to.be.equal(true);
+        expect(isOrganization).to.equal(true);
       });
 
       it('should be able to add an university', async () => {
@@ -60,26 +60,80 @@ import { CertificateManagement } from '../../typechain-types';
           accounts.university,
         );
 
-        expect(hasUniversityRole).to.be.equal(true);
+        expect(hasUniversityRole).to.equal(true);
       });
 
-      it('should be able to add a certifier', async () => {
-        const certifierRole = await certificateManagement.CERTIFIER_ROLE();
+      it('should be able to remove an university', async () => {
+        const universityRole = await certificateManagement.UNIVERSITY_ROLE();
 
-        await certificateManagement.addUniversity(accounts.university);
+        await certificateManagement.removeUniversity(accounts.university);
 
-        const universityConnection = await ethers.getContract(
-          'CertificateManagement',
+        const hasUniversityRole = await certificateManagement.hasRole(
+          universityRole,
           accounts.university,
         );
 
-        await universityConnection.addCertifier(accounts.certifier);
+        expect(hasUniversityRole).to.equal(false);
+      });
 
-        const hasCertifierRole = await certificateManagement.hasRole(
-          certifierRole,
-          accounts.certifier,
-        );
+      describe('Certifier Management', () => {
+        let universityConnection: CertificateManagement;
 
-        expect(hasCertifierRole).to.be.equal(true);
+        beforeEach(async () => {
+          await certificateManagement.addUniversity(accounts.university);
+
+          universityConnection = await ethers.getContract(
+            'CertificateManagement',
+            accounts.university,
+          );
+
+          await universityConnection.addCertifier(accounts.certifier);
+        });
+
+        it('should be able to add a certifier', async () => {
+          const certifierRole = await certificateManagement.CERTIFIER_ROLE();
+
+          const hasCertifierRole = await certificateManagement.hasRole(
+            certifierRole,
+            accounts.certifier,
+          );
+
+          expect(hasCertifierRole).to.equal(true);
+        });
+
+        it('the certifier should have infinite allowance from his university', async () => {
+          const MAX_ALLOWANCE = await certificateManagement.MAX_ALLOWANCE();
+
+          const certifierAllowance = await certificateManagement.allowance(
+            accounts.university,
+            accounts.certifier,
+          );
+
+          expect(certifierAllowance).to.equal(MAX_ALLOWANCE);
+        });
+
+        it('should be able to remove a certifier', async () => {
+          const certifierRole = await certificateManagement.CERTIFIER_ROLE();
+
+          await universityConnection.removeCertifier(accounts.certifier);
+
+          const hasCertifierRole = await certificateManagement.hasRole(
+            certifierRole,
+            accounts.certifier,
+          );
+
+          expect(hasCertifierRole).to.equal(false);
+        });
+
+        it('should zero the ex-certifier allowance', async () => {
+          await universityConnection.removeCertifier(accounts.certifier);
+
+          const certifierAllowance = await certificateManagement.allowance(
+            accounts.university,
+            accounts.certifier,
+          );
+
+          expect(certifierAllowance).to.equal(0);
+        });
       });
     });
