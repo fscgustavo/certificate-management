@@ -11,6 +11,8 @@ contract CertificateManagement is AccessControl, ERC20 {
 
     uint256 public constant MAX_ALLOWANCE = 2**256 - 1;
 
+    mapping(address => address) private _certifierToUniversity;
+
     constructor() ERC20('CToken', 'CTK') {
         _setRoleAdmin(UNIVERSITY_ROLE, ORGANIZATION_ROLE);
         _setRoleAdmin(CERTIFIER_ROLE, UNIVERSITY_ROLE);
@@ -26,6 +28,7 @@ contract CertificateManagement is AccessControl, ERC20 {
     }
 
     function addCertifier(address account) external onlyRole(UNIVERSITY_ROLE) {
+        _certifierToUniversity[account] = msg.sender;
         _grantRole(CERTIFIER_ROLE, account);
 
         approve(account, MAX_ALLOWANCE);
@@ -42,7 +45,9 @@ contract CertificateManagement is AccessControl, ERC20 {
         external
         onlyRole(UNIVERSITY_ROLE)
     {
-        approve(account, 0);
+        delete _certifierToUniversity[account];
         _revokeRole(CERTIFIER_ROLE, account);
+
+        approve(account, 0);
     }
 }
