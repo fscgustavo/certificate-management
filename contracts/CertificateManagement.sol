@@ -4,6 +4,8 @@ pragma solidity ^0.8.7;
 import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
+error DifferentUniversity(address senderUniversity, address expectedUniversity);
+
 contract CertificateManagement is AccessControl, ERC20 {
     enum CertificateStatus {
         Invalid,
@@ -29,8 +31,25 @@ contract CertificateManagement is AccessControl, ERC20 {
 
     mapping(address => address) private s_certifierToUniversity;
     mapping(bytes32 => Certificate) private s_certificates;
-    mapping(bytes32 => string) private s_revocationReason;
     mapping(address => string) private s_universityURI;
+    mapping(bytes32 => string) private s_revocationReason;
+
+    modifier sameUniversity(
+        address senderUniversity,
+        address expectedUniversity
+    ) {
+        if (senderUniversity != expectedUniversity) {
+            revert DifferentUniversity(senderUniversity, expectedUniversity);
+        }
+
+        _;
+    }
+
+    modifier validUniversity(address certifier) {
+        _checkRole(UNIVERSITY_ROLE, s_certifierToUniversity[certifier]);
+
+        _;
+    }
 
     constructor() ERC20('CToken', 'CTK') {
         _setRoleAdmin(UNIVERSITY_ROLE, ORGANIZATION_ROLE);
@@ -43,13 +62,13 @@ contract CertificateManagement is AccessControl, ERC20 {
         external
         onlyRole(ORGANIZATION_ROLE)
     {
-        _grantRole(UNIVERSITY_ROLE, account);
+        grantRole(UNIVERSITY_ROLE, account);
         s_universityURI[account] = universityURI;
     }
 
     function addCertifier(address account) external onlyRole(UNIVERSITY_ROLE) {
         s_certifierToUniversity[account] = msg.sender;
-        _grantRole(CERTIFIER_ROLE, account);
+        grantRole(CERTIFIER_ROLE, account);
 
         approve(account, MAX_ALLOWANCE);
     }
@@ -64,6 +83,7 @@ contract CertificateManagement is AccessControl, ERC20 {
     function removeCertifier(address account)
         external
         onlyRole(UNIVERSITY_ROLE)
+        sameUniversity(msg.sender, s_certifierToUniversity[account])
     {
         delete s_certifierToUniversity[account];
         _revokeRole(CERTIFIER_ROLE, account);
@@ -74,6 +94,7 @@ contract CertificateManagement is AccessControl, ERC20 {
     function registerCertificate(bytes32 certificateId, uint256 issueDate)
         external
         onlyRole(CERTIFIER_ROLE)
+        validUniversity(msg.sender)
     {
         address university = s_certifierToUniversity[msg.sender];
 
