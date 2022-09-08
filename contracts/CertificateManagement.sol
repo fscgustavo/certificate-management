@@ -1,21 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import '@openzeppelin/contracts/access/AccessControl.sol';
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 
+error InvalidOrganization(address sender);
+error InvalidUniversity(address sender);
+error InvalidCertifier(address sender);
+error InvalidSuperior(address sender);
 error DifferentUniversity(address senderUniversity, address expectedUniversity);
 
-contract CertificateManagement is AccessControl, ERC20 {
+contract CertificateManagement is ERC20 {
     enum CertificateStatus {
         Invalid,
         Valid
     }
 
+    struct University {
+        bool active;
+        string URI;
+    }
+
     struct Certifier {
         address certifier;
         address university;
-        string informationURI;
     }
 
     struct Certificate {
@@ -24,15 +31,61 @@ contract CertificateManagement is AccessControl, ERC20 {
         uint256 issueDate;
     }
 
-    bytes32 public constant ORGANIZATION_ROLE = keccak256('ORGANIZATION_ROLE');
-    bytes32 public constant UNIVERSITY_ROLE = keccak256('UNIVERSITY_ROLE');
-    bytes32 public constant CERTIFIER_ROLE = keccak256('CERTIFIER_ROLE');
     uint256 public constant MAX_ALLOWANCE = 2**256 - 1;
 
-    mapping(address => address) private s_certifierToUniversity;
     mapping(bytes32 => Certificate) private s_certificates;
-    mapping(address => string) private s_universityURI;
     mapping(bytes32 => string) private s_revocationReason;
+    mapping(address => bool) private s_organizations;
+    mapping(address => University) private s_universities;
+    mapping(address => string) private s_universityRemotionReason;
+    mapping(address => string) private s_removedUniversities;
+    mapping(address => address) private s_certifierToUniversity;
+
+    modifier onlyOrganization() {
+        if (!s_organizations[msg.sender]) {
+            revert InvalidOrganization(msg.sender);
+        }
+
+        _;
+    }
+
+    modifier validUniversity(address university) {
+        if (!s_universities[university].active) {
+            revert InvalidUniversity(university);
+        }
+
+        _;
+    }
+
+    modifier onlyCertifierSuperior(address certifier) {
+        address adminUniversity = s_certifierToUniversity[certifier];
+
+        if (adminUniversity == address(0x0)) {
+            revert InvalidCertifier(certifier);
+        }
+
+        bool validOrganization = s_organizations[msg.sender];
+
+        bool isActiveUniversity = s_universities[msg.sender].active;
+        bool isSameAdmin = adminUniversity == msg.sender;
+
+        bool validSuperior = validOrganization ||
+            (isActiveUniversity && isSameAdmin);
+
+        if (!validSuperior) {
+            revert InvalidSuperior(msg.sender);
+        }
+
+        _;
+    }
+
+    modifier onlyCertifier() {
+        if (s_certifierToUniversity[msg.sender] == address(0x0)) {
+            revert InvalidCertifier(msg.sender);
+        }
+
+        _;
+    }
 
     modifier sameUniversity(
         address senderUniversity,
@@ -45,61 +98,69 @@ contract CertificateManagement is AccessControl, ERC20 {
         _;
     }
 
-    modifier validUniversity(address certifier) {
-        _checkRole(UNIVERSITY_ROLE, s_certifierToUniversity[certifier]);
-
-        _;
+    constructor() ERC20('CToken', 'CTK') {
+        s_organizations[msg.sender] = true;
     }
 
-    constructor() ERC20('CToken', 'CTK') {
-        _setRoleAdmin(UNIVERSITY_ROLE, ORGANIZATION_ROLE);
-        _setRoleAdmin(CERTIFIER_ROLE, UNIVERSITY_ROLE);
+    function addOrganization(address account) external onlyOrganization {
+        s_organizations[account] = true;
+    }
 
-        _grantRole(ORGANIZATION_ROLE, msg.sender);
+    function removeOrganization(address account) external onlyOrganization {
+        delete s_organizations[account];
     }
 
     function addUniversity(address account, string memory universityURI)
         external
-        onlyRole(ORGANIZATION_ROLE)
+        onlyOrganization
     {
-        grantRole(UNIVERSITY_ROLE, account);
-        s_universityURI[account] = universityURI;
+        s_universities[account] = University(true, universityURI);
     }
 
-    function addCertifier(address account) external onlyRole(UNIVERSITY_ROLE) {
+    function discreditUniversity(address account, string memory reason)
+        external
+        onlyOrganization
+        validUniversity(account)
+    {
+        s_universities[account].active = false;
+
+        s_universityRemotionReason[account] = reason;
+    }
+
+    function addCertifier(address account)
+        external
+        validUniversity(msg.sender)
+    {
         s_certifierToUniversity[account] = msg.sender;
-        grantRole(CERTIFIER_ROLE, account);
 
         approve(account, MAX_ALLOWANCE);
     }
 
-    function removeUniversity(address account)
-        external
-        onlyRole(ORGANIZATION_ROLE)
-    {
-        _revokeRole(UNIVERSITY_ROLE, account);
-    }
-
     function removeCertifier(address account)
         external
-        onlyRole(UNIVERSITY_ROLE)
-        sameUniversity(msg.sender, s_certifierToUniversity[account])
+        onlyCertifierSuperior(account)
     {
         delete s_certifierToUniversity[account];
-        _revokeRole(CERTIFIER_ROLE, account);
 
         approve(account, 0);
     }
 
     function registerCertificate(bytes32 certificateId, uint256 issueDate)
         external
-        onlyRole(CERTIFIER_ROLE)
-        validUniversity(msg.sender)
+        onlyCertifier
     {
-        address university = s_certifierToUniversity[msg.sender];
+        address universityAddress = s_certifierToUniversity[msg.sender];
+
+        University memory certifierUniversity = s_universities[
+            universityAddress
+        ];
+
+        if (!certifierUniversity.active) {
+            revert InvalidUniversity(universityAddress);
+        }
 
         s_certificates[certificateId] = Certificate(
-            Certifier(msg.sender, university, s_universityURI[university]),
+            Certifier(msg.sender, universityAddress),
             CertificateStatus.Valid,
             issueDate
         );
@@ -121,6 +182,10 @@ contract CertificateManagement is AccessControl, ERC20 {
         return s_revocationReason[certificateId];
     }
 
+    function isOrganization(address account) external view returns (bool) {
+        return s_organizations[account];
+    }
+
     function getUniversityOfCertifier(address certifier)
         external
         view
@@ -129,11 +194,19 @@ contract CertificateManagement is AccessControl, ERC20 {
         return s_certifierToUniversity[certifier];
     }
 
-    function getUniversityURI(address university)
+    function getUniversity(address university)
+        external
+        view
+        returns (University memory)
+    {
+        return s_universities[university];
+    }
+
+    function getUniversityRemotionReason(address university)
         external
         view
         returns (string memory)
     {
-        return s_universityURI[university];
+        return s_universityRemotionReason[university];
     }
 }

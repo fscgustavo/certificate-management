@@ -48,11 +48,17 @@ const config: HardhatUserConfig = {
     deployer: {
       default: 0,
     },
-    university: {
+    organization: {
       default: 1,
     },
-    certifier: {
+    university: {
       default: 2,
+    },
+    otherUniversity: {
+      default: 3,
+    },
+    certifier: {
+      default: 4,
     },
   },
   mocha: {

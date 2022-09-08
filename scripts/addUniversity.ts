@@ -8,7 +8,7 @@ export async function addUniversity() {
 
   const { university } = await getNamedAccounts();
 
-  await certificateManagement.addUniversity(university);
+  await certificateManagement.addUniversity(university, 'random');
 }
 
 addUniversity()
