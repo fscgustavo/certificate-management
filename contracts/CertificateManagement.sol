@@ -37,7 +37,7 @@ contract CertificateManagement is ERC20 {
     mapping(bytes32 => string) private s_revocationReason;
     mapping(address => bool) private s_organizations;
     mapping(address => University) private s_universities;
-    mapping(address => string) private s_universityRemotionReason;
+    mapping(address => string) private s_universityDiscreditReason;
     mapping(address => string) private s_removedUniversities;
     mapping(address => address) private s_certifierToUniversity;
 
@@ -124,7 +124,7 @@ contract CertificateManagement is ERC20 {
     {
         s_universities[account].active = false;
 
-        s_universityRemotionReason[account] = reason;
+        s_universityDiscreditReason[account] = reason;
     }
 
     function addCertifier(address account)
@@ -202,11 +202,11 @@ contract CertificateManagement is ERC20 {
         return s_universities[university];
     }
 
-    function getUniversityRemotionReason(address university)
+    function getUniversityDiscreditReason(address university)
         external
         view
         returns (string memory)
     {
-        return s_universityRemotionReason[university];
+        return s_universityDiscreditReason[university];
     }
 }

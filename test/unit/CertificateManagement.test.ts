@@ -107,8 +107,14 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
             accounts.university,
           );
 
+          const discreditReason =
+            await certificateManagement.getUniversityDiscreditReason(
+              accounts.university,
+            );
+
           expect(newUniversity.active).to.equal(false);
           expect(newUniversity.URI).to.equal('random');
+          expect(discreditReason).to.equal('fraud helper');
         });
 
         it('disallow other roles to manage an university', async () => {
@@ -201,7 +207,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           expect(certifierUniversity).to.equal(nullAddress);
         });
 
-        it('can not remove the certifier from other universites', async () => {
+        it('can not remove the certifier from other universities', async () => {
           const otherUniversityConnection = await ethers.getContract(
             'CertificateManagement',
             accounts.otherUniversity,
@@ -212,6 +218,30 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           ).to.be.revertedWith(
             `InvalidSuperior("${accounts.otherUniversity}")`,
           );
+        });
+      });
+
+      describe('Certicate Management', () => {
+        let universityConnection: CertificateManagement;
+
+        beforeEach(async () => {
+          await certificateManagement.addUniversity(
+            accounts.university,
+            'random',
+          );
+
+          universityConnection = await ethers.getContract(
+            'CertificateManagement',
+            accounts.university,
+          );
+
+          await universityConnection.addCertifier(accounts.certifier);
+        });
+
+        it('university can not register certificates', async () => {
+          expect(
+            universityConnection.registerCertificate('abc123', 1000),
+          ).to.be.revertedWith(`NotCertifier("${accounts.otherUniversity}")`);
         });
       });
     });
