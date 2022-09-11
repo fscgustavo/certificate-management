@@ -276,6 +276,22 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           expect(certificate.issueDate).to.equal(issueDate);
         });
 
+        it('should not be able to alter the certificate issuer and the issue date', async () => {
+          await certifierConnection.registerCertificate(
+            certificateId,
+            issueDate,
+          );
+
+          const otherIssueDate = new Date('01/09/2022').getTime();
+
+          await expect(
+            certifierConnection.registerCertificate(
+              certificateId,
+              otherIssueDate,
+            ),
+          ).to.be.revertedWith(`ExistentCertificate(${issueDate})`);
+        });
+
         it('university and organizations can not register certificates', async () => {
           const certificateId = ethers.utils.id('certificate');
 
@@ -327,7 +343,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
             expect(revocationReason).to.equal(reason);
           });
 
-          it('organizations should ble able to remove certificates', async () => {
+          it('organizations should be able to remove certificates', async () => {
             await certificateManagement.revokeCertificate(
               certificateId,
               'Processo ilícito',

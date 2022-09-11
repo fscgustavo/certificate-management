@@ -8,6 +8,7 @@ error InvalidUniversity(address sender);
 error InvalidCertifier(address sender);
 error InvalidSuperior(address sender);
 error InvalidRevoker(address sender);
+error ExistentCertificate(uint256 issueDate);
 
 contract CertificateManagement is ERC20 {
     enum CertificateStatus {
@@ -85,6 +86,14 @@ contract CertificateManagement is ERC20 {
         _;
     }
 
+    modifier onlyNewCertificate(bytes32 certificateId) {
+        if (s_certificates[certificateId].issueDate != 0) {
+            revert ExistentCertificate(s_certificates[certificateId].issueDate);
+        }
+
+        _;
+    }
+
     modifier onlyValidRevoker(bytes32 certificateId) {
         address universityCertificate = s_certificates[certificateId]
             .issuer
@@ -156,6 +165,7 @@ contract CertificateManagement is ERC20 {
     function registerCertificate(bytes32 certificateId, uint256 issueDate)
         external
         onlyCertifier
+        onlyNewCertificate(certificateId)
     {
         address universityAddress = s_certifierToUniversity[msg.sender];
 
