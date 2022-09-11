@@ -60,6 +60,9 @@ const config: HardhatUserConfig = {
     certifier: {
       default: 4,
     },
+    otherCertifier: {
+      default: 5,
+    },
   },
   mocha: {
     timeout: 200_000,

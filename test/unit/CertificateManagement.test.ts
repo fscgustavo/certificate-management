@@ -219,10 +219,27 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
             `InvalidSuperior("${accounts.otherUniversity}")`,
           );
         });
+
+        it('should revert if a inexistent certifier is passed', async () => {
+          await expect(
+            universityConnection.removeCertifier(accounts.otherCertifier),
+          ).to.be.revertedWith(
+            `InvalidCertifier("${accounts.otherCertifier}")`,
+          );
+        });
+
+        it('invalid universities can not register certifiers', async () => {
+          await expect(
+            certificateManagement.addCertifier(accounts.certifier),
+          ).to.be.revertedWith(`InvalidUniversity("${accounts.deployer}")`);
+        });
       });
 
       describe('Certicate Management', () => {
         let universityConnection: CertificateManagement;
+        let certifierConnection: CertificateManagement;
+        const certificateId = ethers.utils.id('certificate');
+        const issueDate = new Date().getTime();
 
         beforeEach(async () => {
           await certificateManagement.addUniversity(
@@ -236,12 +253,154 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           );
 
           await universityConnection.addCertifier(accounts.certifier);
+
+          certifierConnection = await ethers.getContract(
+            'CertificateManagement',
+            accounts.certifier,
+          );
         });
 
-        it('university can not register certificates', async () => {
-          expect(
-            universityConnection.registerCertificate('abc123', 1000),
-          ).to.be.revertedWith(`NotCertifier("${accounts.otherUniversity}")`);
+        it('certifiers should be able to create certificates', async () => {
+          await certifierConnection.registerCertificate(
+            certificateId,
+            issueDate,
+          );
+
+          const certificate = await certifierConnection.getCertificate(
+            certificateId,
+          );
+
+          expect(certificate.issuer.certifier).to.equal(accounts.certifier);
+          expect(certificate.issuer.university).to.equal(accounts.university);
+          expect(certificate.status).to.equal(1);
+          expect(certificate.issueDate).to.equal(issueDate);
+        });
+
+        it('university and organizations can not register certificates', async () => {
+          const certificateId = ethers.utils.id('certificate');
+
+          await expect(
+            universityConnection.registerCertificate(certificateId, issueDate),
+          ).to.be.revertedWith(`InvalidCertifier("${accounts.university}")`);
+
+          await expect(
+            certificateManagement.registerCertificate(certificateId, issueDate),
+          ).to.be.revertedWith(`InvalidCertifier("${accounts.deployer}")`);
+        });
+
+        it('certifiers from invalid universities can not register certificates', async () => {
+          await certificateManagement.discreditUniversity(
+            accounts.university,
+            'fraud helper',
+          );
+
+          await expect(
+            certifierConnection.registerCertificate(certificateId, issueDate),
+          ).to.be.revertedWith(`InvalidUniversity("${accounts.university}")`);
+        });
+
+        describe('Revocation', () => {
+          const reason = 'Ilegal process';
+
+          beforeEach(async () => {
+            await certifierConnection.registerCertificate(
+              certificateId,
+              issueDate,
+            );
+          });
+
+          it('certifiers should be able to revoke certificates', async () => {
+            await certifierConnection.revokeCertificate(certificateId, reason);
+
+            const certificate = await certifierConnection.getCertificate(
+              certificateId,
+            );
+
+            expect(certificate.issuer.certifier).to.equal(accounts.certifier);
+            expect(certificate.issuer.university).to.equal(accounts.university);
+            expect(certificate.status).to.equal(0);
+            expect(certificate.issueDate).to.equal(issueDate);
+
+            const revocationReason =
+              await certifierConnection.getRevocationReason(certificateId);
+
+            expect(revocationReason).to.equal(reason);
+          });
+
+          it('organizations should ble able to remove certificates', async () => {
+            await certificateManagement.revokeCertificate(
+              certificateId,
+              'Processo ilícito',
+            );
+
+            const certificate = await certifierConnection.getCertificate(
+              certificateId,
+            );
+
+            expect(certificate.status).to.equal(0);
+          });
+
+          it('issuer university should be able to remove certificates', async () => {
+            await universityConnection.revokeCertificate(
+              certificateId,
+              'Processo ilícito',
+            );
+
+            const certificate = await certifierConnection.getCertificate(
+              certificateId,
+            );
+
+            expect(certificate.status).to.equal(0);
+          });
+
+          it('other universities can not revoke certificates not issued by them', async () => {
+            const otherUniversityConnection: CertificateManagement =
+              await ethers.getContract(
+                'CertificateManagement',
+                accounts.otherUniversity,
+              );
+
+            await expect(
+              otherUniversityConnection.revokeCertificate(
+                certificateId,
+                'Processo ilícito',
+              ),
+            ).to.be.revertedWith(
+              `InvalidRevoker("${accounts.otherUniversity}")`,
+            );
+          });
+
+          it('other certifier can not revoke a certificate from other university', async () => {
+            await certificateManagement.addUniversity(
+              accounts.otherUniversity,
+              'random',
+            );
+
+            const otherUniversityConnection: CertificateManagement =
+              await ethers.getContract(
+                'CertificateManagement',
+                accounts.otherUniversity,
+              );
+
+            await otherUniversityConnection.addCertifier(
+              accounts.otherUniversity,
+            );
+
+            const otherCertifierConnection: CertificateManagement =
+              await ethers.getContract(
+                'CertificateManagement',
+                accounts.otherCertifier,
+              );
+
+            await expect(
+              otherCertifierConnection.revokeCertificate(
+                certificateId,
+                'Processo ilícito',
+              ),
+            ).to.be.revertedWith(
+              `InvalidRevoker("${accounts.otherCertifier}")`,
+            );
+          });
         });
       });
     });

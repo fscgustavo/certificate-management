@@ -7,7 +7,7 @@ error InvalidOrganization(address sender);
 error InvalidUniversity(address sender);
 error InvalidCertifier(address sender);
 error InvalidSuperior(address sender);
-error DifferentUniversity(address senderUniversity, address expectedUniversity);
+error InvalidRevoker(address sender);
 
 contract CertificateManagement is ERC20 {
     enum CertificateStatus {
@@ -66,11 +66,9 @@ contract CertificateManagement is ERC20 {
 
         bool validOrganization = s_organizations[msg.sender];
 
-        bool isActiveUniversity = s_universities[msg.sender].active;
         bool isSameAdmin = adminUniversity == msg.sender;
 
-        bool validSuperior = validOrganization ||
-            (isActiveUniversity && isSameAdmin);
+        bool validSuperior = validOrganization || isSameAdmin;
 
         if (!validSuperior) {
             revert InvalidSuperior(msg.sender);
@@ -87,12 +85,23 @@ contract CertificateManagement is ERC20 {
         _;
     }
 
-    modifier sameUniversity(
-        address senderUniversity,
-        address expectedUniversity
-    ) {
-        if (senderUniversity != expectedUniversity) {
-            revert DifferentUniversity(senderUniversity, expectedUniversity);
+    modifier onlyValidRevoker(bytes32 certificateId) {
+        address universityCertificate = s_certificates[certificateId]
+            .issuer
+            .university;
+
+        bool validOrganizatizon = s_organizations[msg.sender];
+
+        bool isSameAdmin = msg.sender == universityCertificate ||
+            universityCertificate == s_certifierToUniversity[msg.sender];
+
+        bool isValidUniversity = s_universities[universityCertificate].active;
+
+        bool validRevoker = validOrganizatizon ||
+            (isValidUniversity && isSameAdmin);
+
+        if (!validRevoker) {
+            revert InvalidRevoker(msg.sender);
         }
 
         _;
@@ -120,7 +129,6 @@ contract CertificateManagement is ERC20 {
     function discreditUniversity(address account, string memory reason)
         external
         onlyOrganization
-        validUniversity(account)
     {
         s_universities[account].active = false;
 
@@ -164,6 +172,14 @@ contract CertificateManagement is ERC20 {
             CertificateStatus.Valid,
             issueDate
         );
+    }
+
+    function revokeCertificate(bytes32 certificateId, string memory reason)
+        external
+        onlyValidRevoker(certificateId)
+    {
+        s_certificates[certificateId].status = CertificateStatus.Invalid;
+        s_revocationReason[certificateId] = reason;
     }
 
     function getCertificate(bytes32 certificateId)
