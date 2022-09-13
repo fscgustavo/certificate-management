@@ -8,11 +8,12 @@ const afterPath = './pdfs/after-certificate.pdf';
 export async function setCertificateMetadata() {
   const { certifier, university } = await getNamedAccounts();
 
-  const certificateFile = await fs.readFileSync(beforePath);
+  const certificateFile = fs.readFileSync(beforePath);
 
   const certificate = await PDFDocument.load(certificateFile);
 
   certificate.setTitle('Master of Arts');
+  certificate.setSubject('Master of Arts');
   certificate.setAuthor(certifier);
   certificate.setCreator(university);
   certificate.setProducer(university);
