@@ -240,6 +240,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
         let certifierConnection: CertificateManagement;
         const certificateId = ethers.utils.id('certificate');
         const issueDate = new Date().getTime();
+        const expirationDate = 0;
 
         beforeEach(async () => {
           await certificateManagement.addUniversity(
@@ -264,22 +265,24 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           await certifierConnection.registerCertificate(
             certificateId,
             issueDate,
+            expirationDate,
           );
 
           const certificate = await certifierConnection.getCertificate(
             certificateId,
           );
 
-          expect(certificate.issuer.certifier).to.equal(accounts.certifier);
-          expect(certificate.issuer.university).to.equal(accounts.university);
-          expect(certificate.status).to.equal(1);
-          expect(certificate.issueDate).to.equal(issueDate);
+          expect(certificate.data.certifier).to.equal(accounts.certifier);
+          expect(certificate.data.university).to.equal(accounts.university);
+          expect(certificate.status.revoked).to.equal(false);
+          expect(certificate.data.issueDate).to.equal(issueDate);
         });
 
         it('should not be able to alter the certificate issuer and the issue date', async () => {
           await certifierConnection.registerCertificate(
             certificateId,
             issueDate,
+            expirationDate,
           );
 
           const otherIssueDate = new Date('01/09/2022').getTime();
@@ -288,6 +291,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
             certifierConnection.registerCertificate(
               certificateId,
               otherIssueDate,
+              expirationDate,
             ),
           ).to.be.revertedWith(`ExistentCertificate(${issueDate})`);
         });
@@ -296,11 +300,19 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           const certificateId = ethers.utils.id('certificate');
 
           await expect(
-            universityConnection.registerCertificate(certificateId, issueDate),
+            universityConnection.registerCertificate(
+              certificateId,
+              issueDate,
+              expirationDate,
+            ),
           ).to.be.revertedWith(`InvalidCertifier("${accounts.university}")`);
 
           await expect(
-            certificateManagement.registerCertificate(certificateId, issueDate),
+            certificateManagement.registerCertificate(
+              certificateId,
+              issueDate,
+              expirationDate,
+            ),
           ).to.be.revertedWith(`InvalidCertifier("${accounts.deployer}")`);
         });
 
@@ -311,7 +323,11 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           );
 
           await expect(
-            certifierConnection.registerCertificate(certificateId, issueDate),
+            certifierConnection.registerCertificate(
+              certificateId,
+              issueDate,
+              expirationDate,
+            ),
           ).to.be.revertedWith(`InvalidUniversity("${accounts.university}")`);
         });
 
@@ -322,6 +338,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
             await certifierConnection.registerCertificate(
               certificateId,
               issueDate,
+              expirationDate,
             );
           });
 
@@ -332,15 +349,11 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
               certificateId,
             );
 
-            expect(certificate.issuer.certifier).to.equal(accounts.certifier);
-            expect(certificate.issuer.university).to.equal(accounts.university);
-            expect(certificate.status).to.equal(0);
-            expect(certificate.issueDate).to.equal(issueDate);
-
-            const revocationReason =
-              await certifierConnection.getRevocationReason(certificateId);
-
-            expect(revocationReason).to.equal(reason);
+            expect(certificate.data.certifier).to.equal(accounts.certifier);
+            expect(certificate.data.university).to.equal(accounts.university);
+            expect(certificate.data.issueDate).to.equal(issueDate);
+            expect(certificate.status.revoked).to.equal(true);
+            expect(certificate.status.description).to.equal(reason);
           });
 
           it('organizations should be able to remove certificates', async () => {
@@ -353,7 +366,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
               certificateId,
             );
 
-            expect(certificate.status).to.equal(0);
+            expect(certificate.status.revoked).to.equal(true);
           });
 
           it('issuer university should be able to remove certificates', async () => {
@@ -366,7 +379,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
               certificateId,
             );
 
-            expect(certificate.status).to.equal(0);
+            expect(certificate.status.revoked).to.equal(true);
           });
 
           it('other universities can not revoke certificates not issued by them', async () => {
@@ -417,6 +430,8 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
               `InvalidRevoker("${accounts.otherCertifier}")`,
             );
           });
+
+          it('should be invalid if the expiration date is in the past');
         });
       });
     });

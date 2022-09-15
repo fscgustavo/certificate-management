@@ -11,9 +11,9 @@ error InvalidRevoker(address sender);
 error ExistentCertificate(uint256 issueDate);
 
 contract CertificateManagement is ERC20 {
-    enum CertificateStatus {
-        Invalid,
-        Valid
+    struct CertificateStatus {
+        bool revoked;
+        string description;
     }
 
     struct University {
@@ -21,21 +21,22 @@ contract CertificateManagement is ERC20 {
         string URI;
     }
 
-    struct Certifier {
+    struct Certificate {
         address certifier;
         address university;
+        uint256 issueDate;
+        uint256 expirationDate;
     }
 
-    struct Certificate {
-        Certifier issuer;
+    struct CompleteCertificate {
+        Certificate data;
         CertificateStatus status;
-        uint256 issueDate;
     }
 
     uint256 public constant MAX_ALLOWANCE = 2**256 - 1;
 
     mapping(bytes32 => Certificate) private s_certificates;
-    mapping(bytes32 => string) private s_revocationReason;
+    mapping(bytes32 => CertificateStatus) private s_revokedCertificates;
     mapping(address => bool) private s_organizations;
     mapping(address => University) private s_universities;
     mapping(address => string) private s_universityDiscreditReason;
@@ -96,7 +97,6 @@ contract CertificateManagement is ERC20 {
 
     modifier onlyValidRevoker(bytes32 certificateId) {
         address universityCertificate = s_certificates[certificateId]
-            .issuer
             .university;
 
         bool validOrganizatizon = s_organizations[msg.sender];
@@ -162,11 +162,11 @@ contract CertificateManagement is ERC20 {
         approve(account, 0);
     }
 
-    function registerCertificate(bytes32 certificateId, uint256 issueDate)
-        external
-        onlyCertifier
-        onlyNewCertificate(certificateId)
-    {
+    function registerCertificate(
+        bytes32 certificateId,
+        uint256 issueDate,
+        uint256 expirationDate
+    ) external onlyCertifier onlyNewCertificate(certificateId) {
         address universityAddress = s_certifierToUniversity[msg.sender];
 
         University memory certifierUniversity = s_universities[
@@ -178,9 +178,10 @@ contract CertificateManagement is ERC20 {
         }
 
         s_certificates[certificateId] = Certificate(
-            Certifier(msg.sender, universityAddress),
-            CertificateStatus.Valid,
-            issueDate
+            msg.sender,
+            universityAddress,
+            issueDate,
+            expirationDate
         );
     }
 
@@ -188,24 +189,43 @@ contract CertificateManagement is ERC20 {
         external
         onlyValidRevoker(certificateId)
     {
-        s_certificates[certificateId].status = CertificateStatus.Invalid;
-        s_revocationReason[certificateId] = reason;
+        s_revokedCertificates[certificateId] = CertificateStatus(true, reason);
+    }
+
+    function verifyCertificate(
+        bytes32 certificateId,
+        Certificate memory certificate
+    ) internal view returns (CertificateStatus memory) {
+        CertificateStatus memory certificateStatus = s_revokedCertificates[
+            certificateId
+        ];
+
+        bool isExpired = certificate.expirationDate != 0 &&
+            block.timestamp >= certificate.expirationDate;
+
+        bool isValid = certificate.issueDate != 0 &&
+            certificateStatus.revoked &&
+            !isExpired;
+
+        string memory description = isExpired
+            ? 'Certificado expirado'
+            : certificateStatus.description;
+
+        return CertificateStatus(isValid, description);
     }
 
     function getCertificate(bytes32 certificateId)
         external
         view
-        returns (Certificate memory)
+        returns (CompleteCertificate memory)
     {
-        return s_certificates[certificateId];
-    }
+        Certificate memory certificate = s_certificates[certificateId];
+        CertificateStatus memory status = verifyCertificate(
+            certificateId,
+            certificate
+        );
 
-    function getRevocationReason(bytes32 certificateId)
-        external
-        view
-        returns (string memory)
-    {
-        return s_revocationReason[certificateId];
+        return CompleteCertificate(certificate, status);
     }
 
     function isOrganization(address account) external view returns (bool) {
