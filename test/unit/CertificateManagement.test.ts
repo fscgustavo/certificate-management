@@ -293,7 +293,9 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
               otherIssueDate,
               expirationDate,
             ),
-          ).to.be.revertedWith(`ExistentCertificate(${issueDate})`);
+          ).to.be.revertedWith(
+            `ExistentCertificate("${certificateId}", ${issueDate})`,
+          );
         });
 
         it('should not be able to register a certificate with zero issue date', async () => {

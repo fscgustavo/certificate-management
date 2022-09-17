@@ -8,7 +8,8 @@ error InvalidUniversity(address sender);
 error InvalidCertifier(address sender);
 error InvalidSuperior(address sender);
 error InvalidRevoker(address sender);
-error ExistentCertificate(uint256 issueDate);
+error ExistentCertificate(bytes32 certificateId, uint256 issueDate);
+error ExistentCertifier(address certifier);
 error InvalidDates(uint256 issueDate, uint256 expirationDate);
 
 contract CertificateManagement is ERC20 {
@@ -60,7 +61,7 @@ contract CertificateManagement is ERC20 {
         _;
     }
 
-    modifier onlyCertifierSuperior(address certifier) {
+    modifier onlyCertifierOrSuperior(address certifier) {
         address adminUniversity = s_certifierToUniversity[certifier];
 
         if (adminUniversity == address(0x0)) {
@@ -73,7 +74,9 @@ contract CertificateManagement is ERC20 {
 
         bool validSuperior = validOrganization || isSameAdmin;
 
-        if (!validSuperior) {
+        bool isCertifierItself = msg.sender == certifier;
+
+        if (!validSuperior && !isCertifierItself) {
             revert InvalidSuperior(msg.sender);
         }
 
@@ -90,7 +93,18 @@ contract CertificateManagement is ERC20 {
 
     modifier onlyNewCertificate(bytes32 certificateId) {
         if (s_certificates[certificateId].issueDate != 0) {
-            revert ExistentCertificate(s_certificates[certificateId].issueDate);
+            revert ExistentCertificate(
+                certificateId,
+                s_certificates[certificateId].issueDate
+            );
+        }
+
+        _;
+    }
+
+    modifier onlyNewCertifiers(address certifierAddress) {
+        if (s_certifierToUniversity[certifierAddress] != address(0x0)) {
+            revert ExistentCertifier(certifierAddress);
         }
 
         _;
@@ -159,6 +173,7 @@ contract CertificateManagement is ERC20 {
     function addCertifier(address account)
         external
         validUniversity(msg.sender)
+        onlyNewCertifiers(account)
     {
         s_certifierToUniversity[account] = msg.sender;
 
@@ -167,7 +182,7 @@ contract CertificateManagement is ERC20 {
 
     function removeCertifier(address account)
         external
-        onlyCertifierSuperior(account)
+        onlyCertifierOrSuperior(account)
     {
         delete s_certifierToUniversity[account];
 
