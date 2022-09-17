@@ -18,8 +18,8 @@ export const networkConfig: Record<number, networkConfigItem> = {
   1: {
     name: 'mainnet',
   },
-  4: {
-    name: 'rinkeby',
+  5: {
+    name: 'goerli',
     blockConfirmations: 4,
   },
 };

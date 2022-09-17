@@ -10,7 +10,7 @@ import 'solidity-coverage';
 
 const {
   COINMARKETCAP_API_KEY,
-  RINKEBY_RPC_URL,
+  GOERLI_RPC_URL,
   PRIVATE_KEY = '',
   ETHERSCAN_API_KEY,
 } = process.env;
@@ -21,11 +21,14 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 31337,
     },
-    // rinkeby: {
-    //   url: RINKEBY_RPC_URL,
-    //   accounts: [PRIVATE_KEY],
-    //   chainId: 4,
-    // },
+    localhost: {
+      chainId: 31337,
+    },
+    goerli: {
+      url: GOERLI_RPC_URL,
+      accounts: [PRIVATE_KEY],
+      chainId: 5,
+    },
   },
   solidity: {
     compilers: [
