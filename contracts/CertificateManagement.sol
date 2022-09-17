@@ -9,6 +9,7 @@ error InvalidCertifier(address sender);
 error InvalidSuperior(address sender);
 error InvalidRevoker(address sender);
 error ExistentCertificate(uint256 issueDate);
+error InvalidDates(uint256 issueDate, uint256 expirationDate);
 
 contract CertificateManagement is ERC20 {
     struct CertificateStatus {
@@ -95,6 +96,17 @@ contract CertificateManagement is ERC20 {
         _;
     }
 
+    modifier validDates(uint256 issueDate, uint256 expirationDate) {
+        bool hasInvalidDate = issueDate == 0 ||
+            (expirationDate != 0 && expirationDate <= issueDate);
+
+        if (hasInvalidDate) {
+            revert InvalidDates(issueDate, expirationDate);
+        }
+
+        _;
+    }
+
     modifier onlyValidRevoker(bytes32 certificateId) {
         address universityCertificate = s_certificates[certificateId]
             .university;
@@ -166,7 +178,12 @@ contract CertificateManagement is ERC20 {
         bytes32 certificateId,
         uint256 issueDate,
         uint256 expirationDate
-    ) external onlyCertifier onlyNewCertificate(certificateId) {
+    )
+        external
+        onlyCertifier
+        onlyNewCertificate(certificateId)
+        validDates(issueDate, expirationDate)
+    {
         address universityAddress = s_certifierToUniversity[msg.sender];
 
         University memory certifierUniversity = s_universities[

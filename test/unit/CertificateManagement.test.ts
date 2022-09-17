@@ -296,6 +296,30 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           ).to.be.revertedWith(`ExistentCertificate(${issueDate})`);
         });
 
+        it('should not be able to register a certificate with zero issue date', async () => {
+          await expect(
+            certifierConnection.registerCertificate(
+              certificateId,
+              0,
+              expirationDate,
+            ),
+          ).to.be.revertedWith(`InvalidDates(${0}, ${expirationDate})`);
+        });
+
+        it('the expiration dates should be bigger than the issue date', async () => {
+          const localExpirationDate = new Date('01/01/2022').getTime();
+
+          await expect(
+            certifierConnection.registerCertificate(
+              certificateId,
+              issueDate,
+              localExpirationDate,
+            ),
+          ).to.be.revertedWith(
+            `InvalidDates(${issueDate}, ${localExpirationDate})`,
+          );
+        });
+
         it('university and organizations can not register certificates', async () => {
           const certificateId = ethers.utils.id('certificate');
 
@@ -442,7 +466,7 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
 
           await certifierConnection.registerCertificate(
             certificateId,
-            issueDate,
+            latestBlock.timestamp,
             certificateExpiration,
           );
 
