@@ -12,7 +12,7 @@ error ExistentCertificate(uint256 issueDate);
 
 contract CertificateManagement is ERC20 {
     struct CertificateStatus {
-        bool revoked;
+        bool invalid;
         string description;
     }
 
@@ -196,22 +196,22 @@ contract CertificateManagement is ERC20 {
         bytes32 certificateId,
         Certificate memory certificate
     ) internal view returns (CertificateStatus memory) {
-        CertificateStatus memory certificateStatus = s_revokedCertificates[
+        CertificateStatus memory revokedCertificate = s_revokedCertificates[
             certificateId
         ];
 
         bool isExpired = certificate.expirationDate != 0 &&
             block.timestamp >= certificate.expirationDate;
 
-        bool isValid = certificate.issueDate != 0 &&
-            certificateStatus.revoked &&
-            !isExpired;
+        bool isInvalid = certificate.issueDate == 0 ||
+            revokedCertificate.invalid ||
+            isExpired;
 
         string memory description = isExpired
             ? 'Certificado expirado'
-            : certificateStatus.description;
+            : revokedCertificate.description;
 
-        return CertificateStatus(isValid, description);
+        return CertificateStatus(isInvalid, description);
     }
 
     function getCertificate(bytes32 certificateId)
