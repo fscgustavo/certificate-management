@@ -13,11 +13,10 @@ export async function setCertificateMetadata() {
   const certificate = await PDFDocument.load(certificateFile);
 
   certificate.setTitle('Master of Arts');
-  certificate.setSubject('Master of Arts');
+  certificate.setSubject(`Certificate of Jhon Doe. University Example`);
   certificate.setAuthor(certifier);
   certificate.setCreator(university);
   certificate.setProducer(university);
-  certificate.setKeywords(['Jhon Doe', 'University of Swat']);
   certificate.setCreationDate(new Date('06/10/2013'));
 
   const newCertificateBytes = await certificate.save();

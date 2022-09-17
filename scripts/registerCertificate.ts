@@ -29,6 +29,7 @@ export async function registerCertificate() {
   await certifierConnection.registerCertificate(
     hashMetadata,
     issueDateInMilisseconds,
+    0,
   );
 }
 

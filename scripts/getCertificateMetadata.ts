@@ -8,13 +8,14 @@ export async function getCertificateMetadata() {
     updateMetadata: false,
   });
 
-  return {
+  const certificateMetadata = {
     title: certificate.getTitle(),
     author: certificate.getAuthor(),
     subject: certificate.getSubject(),
     creator: certificate.getCreator(),
-    keywords: certificate.getKeywords(),
     producer: certificate.getProducer(),
     creationDate: certificate.getCreationDate(),
   };
+
+  return certificateMetadata;
 }
