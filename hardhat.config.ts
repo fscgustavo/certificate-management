@@ -12,7 +12,7 @@ const {
   COINMARKETCAP_API_KEY,
   GOERLI_RPC_URL,
   PRIVATE_KEY = '',
-  ETHERSCAN_API_KEY,
+  ETHERSCAN_API_KEY = '',
 } = process.env;
 
 const config: HardhatUserConfig = {
@@ -39,6 +39,16 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: ETHERSCAN_API_KEY,
+    customChains: [
+      {
+        network: 'goerli',
+        chainId: 5,
+        urls: {
+          apiURL: 'https://api-goerli.etherscan.io',
+          browserURL: 'https://goerli.etherscan.io',
+        },
+      },
+    ],
   },
   gasReporter: {
     enabled: true,
