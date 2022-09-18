@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-
 error InvalidOrganization(address sender);
 error InvalidUniversity(address sender);
 error InvalidCertifier(address sender);
@@ -12,7 +10,7 @@ error ExistentCertificate(bytes32 certificateId, uint256 issueDate);
 error ExistentCertifier(address certifier);
 error InvalidDates(uint256 issueDate, uint256 expirationDate);
 
-contract CertificateManagement is ERC20 {
+contract CertificateManagement {
     struct CertificateStatus {
         bool invalid;
         string description;
@@ -34,8 +32,6 @@ contract CertificateManagement is ERC20 {
         Certificate data;
         CertificateStatus status;
     }
-
-    uint256 public constant MAX_ALLOWANCE = 2**256 - 1;
 
     mapping(bytes32 => Certificate) private s_certificates;
     mapping(bytes32 => CertificateStatus) private s_revokedCertificates;
@@ -181,7 +177,7 @@ contract CertificateManagement is ERC20 {
         _;
     }
 
-    constructor() ERC20('CToken', 'CTK') {
+    constructor() {
         s_organizations[msg.sender] = true;
     }
 
@@ -224,8 +220,6 @@ contract CertificateManagement is ERC20 {
     {
         s_certifierToUniversity[account] = msg.sender;
 
-        approve(account, MAX_ALLOWANCE);
-
         emit CertifierAdded(msg.sender, account);
     }
 
@@ -234,8 +228,6 @@ contract CertificateManagement is ERC20 {
         onlyCertifierOrSuperior(account)
     {
         delete s_certifierToUniversity[account];
-
-        approve(account, 0);
 
         emit CertifierRemoved(msg.sender, account);
     }

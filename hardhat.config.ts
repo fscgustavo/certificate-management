@@ -38,7 +38,7 @@ const config: HardhatUserConfig = {
     ],
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY,
+    apiKey: { goerli: ETHERSCAN_API_KEY },
     customChains: [
       {
         network: 'goerli',
