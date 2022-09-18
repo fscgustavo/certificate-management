@@ -1,5 +1,5 @@
 {
-  "name": "nextjs-nft-marketplace-fcc",
+  "name": "blockchain-certificate-management",
   "version": "0.1.0",
   "scripts": {
     "lint": "solhint 'contracts/*.sol'",
