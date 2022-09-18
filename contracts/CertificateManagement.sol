@@ -45,6 +45,45 @@ contract CertificateManagement is ERC20 {
     mapping(address => string) private s_removedUniversities;
     mapping(address => address) private s_certifierToUniversity;
 
+    event OrganizationMemberAdded(
+        address indexed organization,
+        address indexed newMember
+    );
+
+    event OrganizationMemberRemoved(
+        address indexed organization,
+        address indexed removedMember
+    );
+
+    event UniversityAdded(
+        address indexed organization,
+        address indexed university
+    );
+
+    event UniversityDiscredited(
+        address indexed organization,
+        address indexed university,
+        string reason
+    );
+
+    event CertifierAdded(address indexed university, address indexed certifier);
+
+    event CertifierRemoved(
+        address indexed certifierSuperior,
+        address indexed certifier
+    );
+
+    event CertificateRegistered(
+        address indexed certifier,
+        bytes32 indexed certificateId
+    );
+
+    event CertificateRevoked(
+        address indexed revoker,
+        bytes32 indexed certificateId,
+        string reason
+    );
+
     modifier onlyOrganization() {
         if (!s_organizations[msg.sender]) {
             revert InvalidOrganization(msg.sender);
@@ -148,10 +187,14 @@ contract CertificateManagement is ERC20 {
 
     function addOrganization(address account) external onlyOrganization {
         s_organizations[account] = true;
+
+        emit OrganizationMemberAdded(msg.sender, account);
     }
 
     function removeOrganization(address account) external onlyOrganization {
         delete s_organizations[account];
+
+        emit OrganizationMemberRemoved(msg.sender, account);
     }
 
     function addUniversity(address account, string memory universityURI)
@@ -159,6 +202,8 @@ contract CertificateManagement is ERC20 {
         onlyOrganization
     {
         s_universities[account] = University(true, universityURI);
+
+        emit UniversityAdded(msg.sender, account);
     }
 
     function discreditUniversity(address account, string memory reason)
@@ -168,6 +213,8 @@ contract CertificateManagement is ERC20 {
         s_universities[account].active = false;
 
         s_universityDiscreditReason[account] = reason;
+
+        emit UniversityDiscredited(msg.sender, account, reason);
     }
 
     function addCertifier(address account)
@@ -178,6 +225,8 @@ contract CertificateManagement is ERC20 {
         s_certifierToUniversity[account] = msg.sender;
 
         approve(account, MAX_ALLOWANCE);
+
+        emit CertifierAdded(msg.sender, account);
     }
 
     function removeCertifier(address account)
@@ -187,6 +236,8 @@ contract CertificateManagement is ERC20 {
         delete s_certifierToUniversity[account];
 
         approve(account, 0);
+
+        emit CertifierRemoved(msg.sender, account);
     }
 
     function registerCertificate(
@@ -215,6 +266,8 @@ contract CertificateManagement is ERC20 {
             issueDate,
             expirationDate
         );
+
+        emit CertificateRegistered(msg.sender, certificateId);
     }
 
     function revokeCertificate(bytes32 certificateId, string memory reason)
@@ -222,6 +275,8 @@ contract CertificateManagement is ERC20 {
         onlyValidRevoker(certificateId)
     {
         s_revokedCertificates[certificateId] = CertificateStatus(true, reason);
+
+        emit CertificateRevoked(msg.sender, certificateId, reason);
     }
 
     function verifyCertificate(
