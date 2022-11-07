@@ -2,7 +2,9 @@ import fs from 'fs';
 import { PDFDocument } from 'pdf-lib';
 
 export async function getCertificateMetadata() {
-  const certificateFile = await fs.readFileSync('./pdfs/after-certificate.pdf');
+  const certificateFile = await fs.readFileSync(
+    './documents/after-certificate.pdf',
+  );
 
   const certificate = await PDFDocument.load(certificateFile, {
     updateMetadata: false,

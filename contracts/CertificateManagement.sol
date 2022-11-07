@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
-error InvalidOrganization(address sender);
+error InvalidOrganization(address organization);
 error InvalidUniversity(address sender);
 error InvalidCertifier(address sender);
 error InvalidSuperior(address sender);
 error InvalidRevoker(address sender);
 error ExistentCertificate(bytes32 certificateId, uint256 issueDate);
+error InexistentCertificate(bytes32 certificateId);
 error ExistentCertifier(address certifier);
 error InvalidDates(uint256 issueDate, uint256 expirationDate);
 
@@ -38,7 +39,6 @@ contract CertificateManagement {
     mapping(address => bool) private s_organizations;
     mapping(address => University) private s_universities;
     mapping(address => string) private s_universityDiscreditReason;
-    mapping(address => string) private s_removedUniversities;
     mapping(address => address) private s_certifierToUniversity;
 
     event OrganizationMemberAdded(
@@ -188,6 +188,10 @@ contract CertificateManagement {
     }
 
     function removeOrganization(address account) external onlyOrganization {
+        if (!s_organizations[account]) {
+            revert InvalidOrganization(account);
+        }
+
         delete s_organizations[account];
 
         emit OrganizationMemberRemoved(msg.sender, account);
@@ -266,6 +270,10 @@ contract CertificateManagement {
         external
         onlyValidRevoker(certificateId)
     {
+        if (s_certificates[certificateId].issueDate == 0) {
+            revert InexistentCertificate(certificateId);
+        }
+
         s_revokedCertificates[certificateId] = CertificateStatus(true, reason);
 
         emit CertificateRevoked(msg.sender, certificateId, reason);
