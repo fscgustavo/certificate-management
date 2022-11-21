@@ -15,7 +15,6 @@ export async function getCertificateMetadata() {
     author: certificate.getAuthor(),
     subject: certificate.getSubject(),
     creator: certificate.getCreator(),
-    producer: certificate.getProducer(),
     creationDate: certificate.getCreationDate(),
   };
 
