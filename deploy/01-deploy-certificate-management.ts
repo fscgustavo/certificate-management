@@ -25,7 +25,6 @@ async function deployCertificateManagement(hre: HardhatRuntimeEnvironment) {
 
   log(`certificateManagement deployed at ${certificateManagement.address}`);
   log('----------------------------------------------------');
-  // TODO: verify the contract
 
   if (!developmentChains.has(network.name) && process.env.ETHERSCAN_API_KEY) {
     await verify(certificateManagement.address, args);

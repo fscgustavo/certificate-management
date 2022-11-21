@@ -25,3 +25,8 @@ export const networkConfig: Record<number, networkConfigItem> = {
 };
 
 export const developmentChains = new Set(['hardhat', 'localhost']);
+
+export const frontEndContractsFile =
+  '../front-certificate-management/constants/networkMapping.json';
+export const frontEndAbiLocation =
+  '../front-certificate-management/constants/CertificateManagement.json';

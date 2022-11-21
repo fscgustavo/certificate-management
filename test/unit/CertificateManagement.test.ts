@@ -163,17 +163,6 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
           expect(certifierUniversity).to.equal(accounts.university);
         });
 
-        // it('the certifier should have infinite allowance from his university', async () => {
-        //   const MAX_ALLOWANCE = await certificateManagement.MAX_ALLOWANCE();
-
-        //   const certifierAllowance = await certificateManagement.allowance(
-        //     accounts.university,
-        //     accounts.certifier,
-        //   );
-
-        //   expect(certifierAllowance).to.equal(MAX_ALLOWANCE);
-        // });
-
         it('remove a certifier', async () => {
           await universityConnection.removeCertifier(accounts.certifier);
 
@@ -184,17 +173,6 @@ const nullAddress = '0x0000000000000000000000000000000000000000';
 
           expect(certifierUniversity).to.equal(nullAddress);
         });
-
-        // it('should zero the ex-certifier allowance after the removal', async () => {
-        //   await universityConnection.removeCertifier(accounts.certifier);
-
-        //   const certifierAllowance = await certificateManagement.allowance(
-        //     accounts.university,
-        //     accounts.certifier,
-        //   );
-
-        //   expect(certifierAllowance).to.equal(0);
-        // });
 
         it('organization can remove certifiers', async () => {
           await certificateManagement.removeCertifier(accounts.certifier);
